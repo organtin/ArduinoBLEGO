@@ -39,7 +39,7 @@ BLEUnsignedIntCharacteristic   proximityCharacteristic    (SCIENCE_KIT_UUID("001
 BLECharacteristic              colorCharacteristic        (SCIENCE_KIT_UUID("0018"), BLENotify, 4 * sizeof(int));
 BLEUnsignedShortCharacteristic soundPressureCharacteristic(SCIENCE_KIT_UUID("0019"), BLENotify);
 // this is a custom characteristic holding the whole set of data packed into a bytearray
-BLECharacteristic              imuData                    (SCIENCE_KIT_UUID("0020"), BLENotify, 6 * sizeof(float));
+BLECharacteristic              imuData                    (SCIENCE_KIT_UUID("0020"), BLENotify, 7 * sizeof(float));
 
 void setup() {
   Serial.begin(9600);
@@ -63,24 +63,19 @@ void setup() {
   service.addCharacteristic(imuData);
 
   versionCharacteristic.setValue(VERSION);
-
+  
   // add the service and advertise it
   BLE.addService(service); 
-  BLE.advertise();
-  
-  Serial.println("Bluetooth device active, waiting for connections...");
+  BLE.advertise();  
 }
 
-void toSerial(float *data, bool nl = false) {
-  // helper function to write arrays to the serial connection (arrays are assumed to 
-  // have length equal to three)
-  for (int i = 0; i < 3; i++) {
+void toSerial(float *data, int n) {
+  // helper function to write arrays to the serial connection
+  for (int i = 0; i < n; i++) {
     Serial.print(data[i]);
     Serial.print(", ");
   }
-  if (nl) {
-    Serial.println();
-  }
+  Serial.println();
 }
 
 void publishData() {
@@ -90,23 +85,26 @@ void publishData() {
   float acceleration[3];
 
   // get data
+  unsigned long t0 = micros();
   IMU.readEulerAngles(gyroscope[0], gyroscope[1], gyroscope[2]); 
   IMU.readAcceleration(acceleration[0], acceleration[1], acceleration[2]);
-
-  // write to serial port
-  toSerial(gyroscope);
-  toSerial(acceleration, true);
-
+  unsigned long t1 = micros();
+  
   // publish to BLE
   accelerationCharacteristic.writeValue((byte*)acceleration, sizeof(acceleration));
   gyroscopeCharacteristic.writeValue((byte*)gyroscope, sizeof(gyroscope));
 
   // build a custom characteristic with all the data packed together and publish it
-  float imudata[6];
-  for (int i = 0; i < 3; i++) {
+  float imudata[7];
+  imudata[0] = 0.5 * (t0 + t1);
+  for (int i = 1; i <= 3; i++) {
      imudata[i] = acceleration[i];
      imudata[i + 3] = gyroscope[i];
   }
+
+  // write to serial port
+  toSerial(imudata, 7);
+
   imuData.writeValue((byte*)imudata, sizeof(imudata));
 } 
 

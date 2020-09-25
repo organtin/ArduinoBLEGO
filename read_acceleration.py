@@ -25,23 +25,24 @@ def notification_handler(sender, data):
     array = bytearray(data)
 
     # here we decode the custom characteristics
-    ax = struct.unpack('f', array[0:4])
-    ay = struct.unpack('f', array[4:8])
-    az = struct.unpack('f', array[8:12])
-    gx = struct.unpack('f', array[12:16])
-    gy = struct.unpack('f', array[16:20])
-    gz = struct.unpack('f', array[20:24])
-    print(f'{ax[0]}, {ay[0]}, {az[0]}, {gx[0]}, {gy[0]}, {gz[0]}')
+    t  = struct.unpack('f', array[0:4])
+    ax = struct.unpack('f', array[4:8])
+    ay = struct.unpack('f', array[8:12])
+    az = struct.unpack('f', array[12:16])
+    gx = struct.unpack('f', array[16:20])
+    gy = struct.unpack('f', array[20:24])
+    gz = struct.unpack('f', array[24:28])
+    print(f'{t[0]}, {ax[0]}, {ay[0]}, {az[0]}, {gx[0]}, {gy[0]}, {gz[0]}')
 
-async def run(address, loop):
-    async with BleakClient(address, loop=loop) as client:
+async def run(address):
+    async with BleakClient(address) as client:
         x = await client.is_connected()
         
         await client.start_notify(CHARACTERISTIC_UUID, notification_handler)
-        await asyncio.sleep(460.0, loop=loop)
+        await asyncio.sleep(460.0)
         await client.stop_notify(CHARACTERISTIC_UUID)
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(address, loop))
+    loop.run_until_complete(run(address))
